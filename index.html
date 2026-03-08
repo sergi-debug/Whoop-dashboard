@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard de Sueño</title>
+  <style>
+    :root { color-scheme: dark; }
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at top,#18263f 0%,#0b1220 50%,#020617 100%);color:#e2e8f0}
+    .app{max-width:1200px;margin:auto;padding:20px}
+    .header h1{margin:0 0 6px;display:flex;gap:8px;align-items:center}
+    .muted{color:#94a3b8}
+    .controls{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+    select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:8px 10px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .card,.panel{background:rgba(15,23,42,.85);border:1px solid #24324a;border-radius:12px;padding:12px}
+    .card b{font-size:1.2rem}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    .legend{display:flex;gap:12px;font-size:.9rem}
+    .dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+    svg{width:100%;height:320px;background:#0b1324;border-radius:10px}
+    @media (max-width: 900px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="header">
+      <h1>🌙 Dashboard de Sueño</h1>
+      <div class="muted">Modo noche, selección de periodos y línea de tendencia en los gráficos.</div>
+    </section>
+
+    <section class="controls">
+      <label>Periodo
+        <select id="period">
+          <option value="7">Últimos 7 días</option>
+          <option value="14" selected>Últimos 14 días</option>
+          <option value="30">Últimos 30 días</option>
+          <option value="all">Todo</option>
+        </select>
+      </label>
+      <label>Métrica principal
+        <select id="metric"></select>
+      </label>
+    </section>
+
+    <section class="cards" id="cards"></section>
+
+    <section class="grid">
+      <article class="panel">
+        <h3 id="lineTitle"></h3>
+        <div class="legend"><span><i class="dot" style="background:#67e8f9"></i> Valor</span><span><i class="dot" style="background:#f59e0b"></i> Tendencia</span></div>
+        <svg id="lineChart" viewBox="0 0 800 320"></svg>
+      </article>
+      <article class="panel">
+        <h3>Composición del sueño (Profundo vs REM)</h3>
+        <div class="legend"><span><i class="dot" style="background:#22d3ee"></i> Profundo</span><span><i class="dot" style="background:#a78bfa"></i> REM</span></div>
+        <svg id="barChart" viewBox="0 0 800 320"></svg>
+      </article>
+    </section>
+  </main>
+
+<script>
+const data=[
+{date:"2023-12-01",performance:100,asleepMin:491,efficiency:91,respiratory:15.5,deepMin:92,remMin:101},
+{date:"2023-12-02",performance:84,asleepMin:401,efficiency:88,respiratory:15.8,deepMin:87,remMin:86},
+{date:"2023-12-03",performance:95,asleepMin:421,efficiency:91,respiratory:15.9,deepMin:61,remMin:102},
+{date:"2023-12-04",performance:85,asleepMin:410,efficiency:94,respiratory:15.6,deepMin:78,remMin:79},
+{date:"2023-12-05",performance:96,asleepMin:450,efficiency:91,respiratory:15.9,deepMin:48,remMin:116},
+{date:"2023-12-06",performance:96,asleepMin:447,efficiency:88,respiratory:15.8,deepMin:79,remMin:120},
+{date:"2023-12-07",performance:79,asleepMin:348,efficiency:84,respiratory:15.8,deepMin:52,remMin:89},
+{date:"2023-12-08",performance:98,asleepMin:463,efficiency:90,respiratory:15.8,deepMin:116,remMin:102},
+{date:"2023-12-09",performance:86,asleepMin:395,efficiency:86,respiratory:15.9,deepMin:67,remMin:82},
+{date:"2023-12-10",performance:64,asleepMin:309,efficiency:71,respiratory:16.5,deepMin:43,remMin:81},
+{date:"2023-12-11",performance:77,asleepMin:333,efficiency:83,respiratory:16.5,deepMin:63,remMin:72},
+{date:"2023-12-12",performance:98,asleepMin:438,efficiency:90,respiratory:16.1,deepMin:116,remMin:69},
+{date:"2023-12-13",performance:91,asleepMin:413,efficiency:88,respiratory:15.8,deepMin:74,remMin:84},
+{date:"2023-12-14",performance:89,asleepMin:401,efficiency:89,respiratory:16.0,deepMin:71,remMin:85},
+{date:"2023-12-15",performance:92,asleepMin:413,efficiency:92,respiratory:15.7,deepMin:84,remMin:96},
+{date:"2023-12-16",performance:63,asleepMin:300,efficiency:79,respiratory:15.8,deepMin:35,remMin:77},
+{date:"2023-12-17",performance:84,asleepMin:402,efficiency:86,respiratory:15.9,deepMin:73,remMin:101},
+{date:"2023-12-18",performance:92,asleepMin:444,efficiency:90,respiratory:15.7,deepMin:83,remMin:125},
+{date:"2023-12-19",performance:85,asleepMin:402,efficiency:87,respiratory:15.8,deepMin:88,remMin:85},
+{date:"2023-12-20",performance:93,asleepMin:421,efficiency:89,respiratory:15.9,deepMin:100,remMin:83},
+{date:"2023-12-21",performance:85,asleepMin:387,efficiency:85,respiratory:15.7,deepMin:74,remMin:85},
+{date:"2023-12-22",performance:100,asleepMin:447,efficiency:87,respiratory:16.0,deepMin:81,remMin:115},
+{date:"2023-12-23",performance:91,asleepMin:419,efficiency:87,respiratory:15.8,deepMin:78,remMin:99},
+{date:"2023-12-24",performance:73,asleepMin:348,efficiency:78,respiratory:16.0,deepMin:56,remMin:82},
+{date:"2023-12-25",performance:77,asleepMin:371,efficiency:89,respiratory:15.4,deepMin:62,remMin:89},
+{date:"2023-12-26",performance:78,asleepMin:365,efficiency:88,respiratory:15.4,deepMin:73,remMin:82},
+{date:"2023-12-27",performance:100,asleepMin:451,efficiency:87,respiratory:15.4,deepMin:95,remMin:115},
+{date:"2023-12-28",performance:85,asleepMin:394,efficiency:86,respiratory:15.4,deepMin:79,remMin:103},
+{date:"2023-12-29",performance:86,asleepMin:380,efficiency:85,respiratory:15.7,deepMin:73,remMin:75},
+{date:"2023-12-30",performance:70,asleepMin:337,efficiency:87,respiratory:15.1,deepMin:53,remMin:73},
+{date:"2023-12-31",performance:71,asleepMin:340,efficiency:88,respiratory:15.4,deepMin:44,remMin:80},
+{date:"2024-01-01",performance:98,asleepMin:434,efficiency:87,respiratory:15.6,deepMin:65,remMin:114},
+{date:"2024-01-02",performance:100,asleepMin:461,efficiency:90,respiratory:15.2,deepMin:89,remMin:111},
+{date:"2024-01-03",performance:86,asleepMin:395,efficiency:87,respiratory:15.8,deepMin:92,remMin:79},
+{date:"2024-01-04",performance:91,asleepMin:408,efficiency:88,respiratory:15.5,deepMin:88,remMin:89},
+{date:"2024-01-05",performance:80,asleepMin:387,efficiency:87,respiratory:15.3,deepMin:88,remMin:84},
+{date:"2024-01-06",performance:70,asleepMin:337,efficiency:87,respiratory:15.8,deepMin:60,remMin:77},
+{date:"2024-01-07",performance:67,asleepMin:319,efficiency:89,respiratory:15.7,deepMin:36,remMin:84},
+{date:"2024-01-08",performance:87,asleepMin:405,efficiency:88,respiratory:15.4,deepMin:88,remMin:88},
+{date:"2024-01-09",performance:83,asleepMin:387,efficiency:85,respiratory:15.3,deepMin:82,remMin:77}
+];
+
+const metricMap={performance:"Rendimiento del sueño (%)",asleepMin:"Minutos dormido",efficiency:"Eficiencia (%)",deepMin:"Sueño profundo (min)",remMin:"Sueño REM (min)",respiratory:"Respiración (rpm)"};
+const metricSel=document.getElementById('metric');
+Object.entries(metricMap).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v;metricSel.appendChild(o);});
+
+const avg=(arr,k)=>arr.reduce((a,b)=>a+b[k],0)/arr.length;
+function trend(arr,key){const n=arr.length;const sx=arr.reduce((a,_,i)=>a+i,0),sy=arr.reduce((a,d)=>a+d[key],0),sxy=arr.reduce((a,d,i)=>a+i*d[key],0),sxx=arr.reduce((a,_,i)=>a+i*i,0);const den=n*sxx-sx*sx;const m=den? (n*sxy-sx*sy)/den:0;const b=(sy-m*sx)/n;return arr.map((d,i)=>({...d,trend:m*i+b,label:d.date.slice(5)}));}
+const pad={l:50,r:20,t:20,b:35};
+const W=800,H=320;
+const sx=(i,n)=>pad.l + (i*(W-pad.l-pad.r))/Math.max(1,n-1);
+const sy=(v,min,max)=>H-pad.b - ((v-min)/(max-min||1))*(H-pad.t-pad.b);
+
+function drawLine(svg,arr,key){svg.innerHTML='';const vals=arr.map(d=>d[key]);const trends=arr.map(d=>d.trend);const min=Math.min(...vals,...trends),max=Math.max(...vals,...trends);
+for(let i=0;i<5;i++){const y=pad.t + i*(H-pad.t-pad.b)/4;svg.insertAdjacentHTML('beforeend',`<line x1='${pad.l}' y1='${y}' x2='${W-pad.r}' y2='${y}' stroke='#1f2a3c'/>`)}
+const line=arr.map((d,i)=>`${sx(i,arr.length)},${sy(d[key],min,max)}`).join(' ');
+const tline=arr.map((d,i)=>`${sx(i,arr.length)},${sy(d.trend,min,max)}`).join(' ');
+svg.insertAdjacentHTML('beforeend',`<polyline fill='none' stroke='#67e8f9' stroke-width='3' points='${line}'/>`);
+svg.insertAdjacentHTML('beforeend',`<polyline fill='none' stroke='#f59e0b' stroke-width='3' stroke-dasharray='8 6' points='${tline}'/>`);
+arr.forEach((d,i)=>{if(i%Math.ceil(arr.length/6)!==0&&i!==arr.length-1)return;svg.insertAdjacentHTML('beforeend',`<text x='${sx(i,arr.length)}' y='${H-10}' fill='#94a3b8' font-size='10' text-anchor='middle'>${d.label}</text>`);});
+}
+
+function drawBars(svg,arr){svg.innerHTML='';const max=Math.max(...arr.map(d=>Math.max(d.deepMin,d.remMin)));const groupW=(W-pad.l-pad.r)/arr.length;const bw=Math.max(4,groupW*.35);
+for(let i=0;i<5;i++){const y=pad.t + i*(H-pad.t-pad.b)/4;svg.insertAdjacentHTML('beforeend',`<line x1='${pad.l}' y1='${y}' x2='${W-pad.r}' y2='${y}' stroke='#1f2a3c'/>`)}
+arr.forEach((d,i)=>{const x=sx(i,arr.length)-bw;const yd=sy(d.deepMin,0,max),yr=sy(d.remMin,0,max);svg.insertAdjacentHTML('beforeend',`<rect x='${x}' y='${yd}' width='${bw}' height='${H-pad.b-yd}' fill='#22d3ee'/><rect x='${x+bw+2}' y='${yr}' width='${bw}' height='${H-pad.b-yr}' fill='#a78bfa'/>`);if(i%Math.ceil(arr.length/6)===0||i===arr.length-1)svg.insertAdjacentHTML('beforeend',`<text x='${sx(i,arr.length)}' y='${H-10}' fill='#94a3b8' font-size='10' text-anchor='middle'>${d.label}</text>`);});
+}
+
+function renderCards(arr){document.getElementById('cards').innerHTML=`
+<article class='card'><div><b>${avg(arr,'performance').toFixed(0)}%</b><div class='muted'>Rendimiento medio</div></div></article>
+<article class='card'><div><b>${(avg(arr,'asleepMin')/60).toFixed(1)} h</b><div class='muted'>Duración media</div></div></article>
+<article class='card'><div><b>${avg(arr,'deepMin').toFixed(0)} min</b><div class='muted'>Profundo medio</div></div></article>
+<article class='card'><div><b>${avg(arr,'remMin').toFixed(0)} min</b><div class='muted'>REM medio</div></div></article>`;
+}
+
+function render(){const p=document.getElementById('period').value;const key=metricSel.value||'performance';const base=p==='all'?data:data.slice(-Number(p));const arr=trend(base,key);document.getElementById('lineTitle').textContent=`Evolución: ${metricMap[key]}`;drawLine(document.getElementById('lineChart'),arr,key);drawBars(document.getElementById('barChart'),arr);renderCards(base);}
+
+metricSel.value='performance';
+document.getElementById('period').addEventListener('change',render);metricSel.addEventListener('change',render);render();
+</script>
+</body>
+</html>
